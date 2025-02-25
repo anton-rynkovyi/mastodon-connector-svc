@@ -2,7 +2,7 @@ package com.airdodge.mastodon.connector.repository;
 
 import java.time.Instant;
 
-import com.airdodge.mastodon.connector.model.Post;
+import com.airdodge.mastodon.connector.model.PostEntity;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +21,7 @@ import reactor.test.StepVerifier;
 @Testcontainers
 @DataCassandraTest
 @ExtendWith(SpringExtension.class)
-public class PostReactiveRepositoryIntegrationTest {
+public class PostEntityReactiveRepositoryIntegrationTest {
 
     @Container
     public static CassandraContainer<?> cassandra = new CassandraContainer<>()
@@ -46,19 +46,24 @@ public class PostReactiveRepositoryIntegrationTest {
     @Test
     public void testSaveAndFind() {
         // given
-        Post givenPost = new Post("1", Instant.now().getEpochSecond());
+        PostEntity givenPostEntity = new PostEntity("1", "2", Instant.now().getEpochSecond());
 
-        Mono<Post> savedMono = repository.save(givenPost);
+        Mono<PostEntity> savedMono = repository.save(givenPostEntity);
 
         StepVerifier.create(savedMono)
-                .expectNextMatches(saved -> saved.id().equals("1"))
+                .expectNextMatches(saved ->
+                        saved.id().equals(givenPostEntity.id())
+                                && saved.createdBy().equals(givenPostEntity.createdBy())
+                                && saved.createdAt().equals(givenPostEntity.createdAt()))
                 .verifyComplete();
 
-        Mono<Post> retrievedMono = repository.findById("1");
+        Mono<PostEntity> retrievedMono = repository.findById(givenPostEntity.id());
 
         StepVerifier.create(retrievedMono)
-                .expectNextMatches(retrieved -> retrieved.id().equals("1")
-                        && retrieved.createdAt().equals(givenPost.createdAt()))
+                .expectNextMatches(retrieved ->
+                        retrieved.id().equals(givenPostEntity.id())
+                                && retrieved.createdBy().equals(givenPostEntity.createdBy())
+                                && retrieved.createdAt().equals(givenPostEntity.createdAt()))
                 .verifyComplete();
     }
 }

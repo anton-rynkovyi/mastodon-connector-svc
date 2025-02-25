@@ -1,6 +1,6 @@
 package com.airdodge.mastodon.connector.client;
 
-import com.airdodge.mastodon.connector.model.MastodonData;
+import com.airdodge.mastodon.connector.model.MastodonPost;
 import com.airdodge.mastodon.connector.model.MastodonSseType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelOption;
@@ -47,7 +47,7 @@ public class MastodonClient {
                 .build();
     }
 
-    public Flux<ServerSentEvent<MastodonData>> getPostsSteam() {
+    public Flux<ServerSentEvent<MastodonPost>> getPostsSteam() {
         return webClient.get()
                 .uri(uriBuilder -> UriComponentsBuilder
                         .fromUriString(mastodonProperties.getUrl())
@@ -61,6 +61,8 @@ public class MastodonClient {
 //              Mastodon doesn't send body when 'delete'!? Just sends id as a number!
 //                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<MastodonData>>() {})
                 .bodyToFlux(ServerSentEvent.class)
+                .filter(sse -> sse.event() != null
+                        && MastodonSseType.fromValue(sse.event()) != MastodonSseType.DELETE)
                 .mapNotNull(this::parseAndGetSseMastodonData)
                 .doOnError(it -> log.error("Error streaming data"))
                 .retryWhen(Retry.fixedDelay(Long.MAX_VALUE, Duration.ofSeconds(1))
@@ -68,16 +70,22 @@ public class MastodonClient {
                 .log();
     }
 
-    private ServerSentEvent<MastodonData> parseAndGetSseMastodonData(ServerSentEvent<?> sse) {
+    private ServerSentEvent<MastodonPost> parseAndGetSseMastodonData(ServerSentEvent<?> sse) {
         MastodonSseType mastodonSseType = MastodonSseType.fromValue(sse.event());
-        ServerSentEvent.Builder<MastodonData> sseBuilder = ServerSentEvent.<MastodonData>builder()
+        ServerSentEvent.Builder<MastodonPost> sseBuilder = ServerSentEvent.<MastodonPost>builder()
                 .event(sse.event() != null ? sse.event() : MastodonSseType.UNKNOWN.name());
-        return mastodonSseType == MastodonSseType.DELETE
-                ? sseBuilder
-                .data(new MastodonData(String.valueOf(sse.data()), null, null))
-                .build()
-                : sseBuilder
-                .data(objectMapper.convertValue(sse.data(), MastodonData.class))
+
+        return sseBuilder
+                .data(objectMapper.convertValue(sse.data(), MastodonPost.class))
                 .build();
+
+        // needed if we're gonna delete posts
+//        return mastodonSseType == MastodonSseType.DELETE
+//                ? sseBuilder
+//                .data(new MastodonPost(String.valueOf(sse.data()), null, null))
+//                .build()
+//                : sseBuilder
+//                .data(objectMapper.convertValue(sse.data(), MastodonPost.class))
+//                .build();
     }
 }

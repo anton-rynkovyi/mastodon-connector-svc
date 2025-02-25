@@ -1,6 +1,6 @@
 package com.airdodge.mastodon.connector.config.kafka;
 
-import com.airdodge.mastodon.connector.model.MastodonData;
+import com.airdodge.mastodon.connector.model.MastodonPost;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -33,14 +33,14 @@ public class KafkaConfiguration {
     }
 
     @Bean
-    public KafkaSender<String, MastodonData> kafkaSender(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
+    public KafkaSender<String, MastodonPost> kafkaSender(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
         Map<String, Object> props = Map.of(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
                 ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class
         );
 
-        SenderOptions<String, MastodonData> senderOptions = SenderOptions.create(props);
+        SenderOptions<String, MastodonPost> senderOptions = SenderOptions.create(props);
         return KafkaSender.create(senderOptions);
     }
 }

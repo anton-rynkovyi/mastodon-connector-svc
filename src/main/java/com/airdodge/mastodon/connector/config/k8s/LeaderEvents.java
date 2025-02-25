@@ -9,6 +9,7 @@ import org.springframework.integration.leader.event.OnRevokedEvent;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
 
+
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "spring.cloud.kubernetes.leader", name = "enabled", havingValue = "true")

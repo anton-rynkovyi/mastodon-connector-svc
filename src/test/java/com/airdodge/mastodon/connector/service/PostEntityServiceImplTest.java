@@ -2,11 +2,13 @@ package com.airdodge.mastodon.connector.service;
 
 import com.airdodge.mastodon.connector.client.MastodonClient;
 import com.airdodge.mastodon.connector.config.kafka.KafkaTopicConfiguration;
-import com.airdodge.mastodon.connector.model.MastodonData;
-import com.airdodge.mastodon.connector.model.Post;
+import com.airdodge.mastodon.connector.model.MastodonAccount;
+import com.airdodge.mastodon.connector.model.MastodonPost;
+import com.airdodge.mastodon.connector.model.PostEntity;
 import com.airdodge.mastodon.connector.repository.PostReactiveRepository;
 import com.airdodge.mastodon.connector.service.impl.PostServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -23,12 +25,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class PostServiceImplTest {
+public class PostEntityServiceImplTest {
 
     private PostReactiveRepository postReactiveRepository;
     private MastodonClient mastodonClient;
     private PostService postService;
-    private KafkaSender<String, MastodonData> kafkaSender;
+    private KafkaSender<String, MastodonPost> kafkaSender;
 
     @BeforeEach
     void setUp() {
@@ -45,96 +47,98 @@ public class PostServiceImplTest {
     @Test
     void testSavePost() {
         // given
-        String id = "1";
-        Long createdAt = 1625152800L;
-        Post givenPost = new Post(id, createdAt);
+        PostEntity givenPostEntity = new PostEntity("1", "2", 1625152800L);
 
-        when(postReactiveRepository.save(any(Post.class))).thenReturn(Mono.just(givenPost));
+        when(postReactiveRepository.save(any(PostEntity.class))).thenReturn(Mono.just(givenPostEntity));
 
         // when
-        Mono<Post> result = postService.savePost(id, createdAt);
+        Mono<PostEntity> result = postService.savePost(givenPostEntity.id(), givenPostEntity.createdBy(), givenPostEntity.createdAt());
 
         // then
         StepVerifier.create(result)
-                .expectNext(givenPost)
+                .expectNext(givenPostEntity)
                 .verifyComplete();
 
         verify(postReactiveRepository).save(ArgumentMatchers.argThat(p ->
-                p.id().equals(id) && p.createdAt().equals(createdAt)));
+                p.id().equals(givenPostEntity.id())
+                        && p.createdBy().equals(givenPostEntity.createdBy())
+                        && p.createdAt().equals(givenPostEntity.createdAt())));
     }
 
     @Test
     void testGetPostById() {
         // given
-        String id = "1";
-        Long createdAt = 1625152800L;
-        Post givenPost = new Post(id, createdAt);
+        PostEntity givenPostEntity = new PostEntity("1", "2", 1625152800L);
 
-        when(postReactiveRepository.findById(id)).thenReturn(Mono.just(givenPost));
+        when(postReactiveRepository.findById(givenPostEntity.id())).thenReturn(Mono.just(givenPostEntity));
 
         // when
-        Mono<Post> result = postService.getPostById(id);
+        Mono<PostEntity> result = postService.getPostById(givenPostEntity.id());
 
         // then
         StepVerifier.create(result)
-                .expectNext(givenPost)
+                .expectNext(givenPostEntity)
                 .verifyComplete();
 
-        verify(postReactiveRepository).findById(id);
+        verify(postReactiveRepository).findById(givenPostEntity.id());
     }
 
     @Test
     void testGetPostsStream_forNonDeleteEvent() {
         // given
-        MastodonData mastodonData = new MastodonData("1", Instant.EPOCH, "content1");
+        MastodonPost givenMastodonPost = new MastodonPost("1", Instant.EPOCH, "content1",
+                new MastodonAccount("2", "username"));
 
 
-        ServerSentEvent<MastodonData> sse = ServerSentEvent.<MastodonData>builder()
+        ServerSentEvent<MastodonPost> sse = ServerSentEvent.<MastodonPost>builder()
                 .event("create")
-                .data(mastodonData)
+                .data(givenMastodonPost)
                 .build();
 
-        when(postReactiveRepository.save(any(Post.class))).thenReturn(
-                Mono.just(new Post(mastodonData.id(), mastodonData.createdAt().getEpochSecond()))
+        when(postReactiveRepository.save(any(PostEntity.class))).thenReturn(
+                Mono.just(new PostEntity(givenMastodonPost.id(), givenMastodonPost.account().id(),
+                        givenMastodonPost.createdAt().getEpochSecond()))
         );
         when(mastodonClient.getPostsSteam()).thenReturn(Flux.just(sse));
         SenderResult<Object> dummySenderResult = Mockito.mock(SenderResult.class);
         when(kafkaSender.send(any())).thenReturn(Flux.just(dummySenderResult));
 
         // when
-        Flux<MastodonData> result = postService.getPostsStream();
+        Flux<MastodonPost> result = postService.getPostsStream();
 
         // then
         StepVerifier.create(result)
-                .expectNext(mastodonData)
+                .expectNext(givenMastodonPost)
                 .verifyComplete();
 
-        verify(postReactiveRepository).save(any(Post.class));
+        verify(postReactiveRepository).save(any(PostEntity.class));
     }
 
     @Test
+    @Disabled("This test is disabled if we don't have to remove posts")
     void testGetPostsStream_forDeleteEvent() {
         // given
-        MastodonData mastodonData = new MastodonData("1", Instant.EPOCH, "content1");
+        MastodonPost givenMastodonPost = new MastodonPost("1", Instant.EPOCH, "content1",
+                new MastodonAccount("2", "username"));
 
-        ServerSentEvent<MastodonData> sse = ServerSentEvent.<MastodonData>builder()
+        ServerSentEvent<MastodonPost> sse = ServerSentEvent.<MastodonPost>builder()
                 .event("delete")
-                .data(mastodonData)
+                .data(givenMastodonPost)
                 .build();
 
-        when(postReactiveRepository.deleteById(mastodonData.id())).thenReturn(Mono.empty());
+        when(postReactiveRepository.deleteById(givenMastodonPost.id())).thenReturn(Mono.empty());
         when(mastodonClient.getPostsSteam()).thenReturn(Flux.just(sse));
         SenderResult<Object> dummySenderResult = Mockito.mock(SenderResult.class);
         when(kafkaSender.send(any())).thenReturn(Flux.just(dummySenderResult));
 
         // when
-        Flux<MastodonData> result = postService.getPostsStream();
+        Flux<MastodonPost> result = postService.getPostsStream();
 
         // then
         StepVerifier.create(result)
-                .expectNext(mastodonData)
+                .expectNext(givenMastodonPost)
                 .verifyComplete();
 
-        verify(postReactiveRepository).deleteById(mastodonData.id());
+        verify(postReactiveRepository).deleteById(givenMastodonPost.id());
     }
 }

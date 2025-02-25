@@ -6,9 +6,12 @@ import org.springframework.data.cassandra.core.mapping.PrimaryKey;
 import org.springframework.data.cassandra.core.mapping.Table;
 
 @Table("posts")
-public record Post(
+public record PostEntity(
         @PrimaryKey
         String id,
+
+        @Column("created_by")
+        String createdBy,
 
         @Column("created_at")
         Long createdAt

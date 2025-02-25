@@ -1,15 +1,15 @@
 package com.airdodge.mastodon.connector.service;
 
-import com.airdodge.mastodon.connector.model.MastodonData;
-import com.airdodge.mastodon.connector.model.Post;
+import com.airdodge.mastodon.connector.model.MastodonPost;
+import com.airdodge.mastodon.connector.model.PostEntity;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface PostService {
 
-    Mono<Post> savePost(String id, Long createdAt);
+    Mono<PostEntity> savePost(String id, String createdBy, Long createdAt);
 
-    Mono<Post> getPostById(String id);
+    Mono<PostEntity> getPostById(String id);
 
-    Flux<MastodonData> getPostsStream();
+    Flux<MastodonPost> getPostsStream();
 }

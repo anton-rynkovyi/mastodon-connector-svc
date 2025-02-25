@@ -1,6 +1,6 @@
 package com.airdodge.mastodon.connector.controller;
 
-import com.airdodge.mastodon.connector.model.MastodonData;
+import com.airdodge.mastodon.connector.model.MastodonPost;
 import com.airdodge.mastodon.connector.service.PostService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +17,7 @@ public class PostController {
     private final PostService postService;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<MastodonData> streamPosts() {
+    public Flux<MastodonPost> streamPosts() {
         return postService.getPostsStream();
     }
 }
