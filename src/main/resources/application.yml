@@ -1,0 +1,31 @@
+server:
+  port: 8082
+
+spring:
+  cassandra:
+    contact-points: localhost
+    port: 9042
+    local-datacenter: datacenter1
+    keyspace-name: mastodon
+    username: admin
+    password: admin
+    schema-action: create_if_not_exists
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+airdodge:
+  mastodon-connector-svc:
+    mastodon:
+      access-token: ez7LTmtAIiZ5Z5X9jVT7XarPg2rq8kLhF5Yvtzikyoc
+      url: https://mastodon.social
+      api:
+        get-posts-streaming: /api/v1/streaming/public
+  kafka:
+    topic:
+      posts:
+        name: posts
+        partitions: 1
+        replication-factor: 1
