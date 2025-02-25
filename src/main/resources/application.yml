@@ -15,6 +15,12 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  cloud:
+    kubernetes:
+      leader:
+        enabled: true
+        namespace: default
+        config-map-name: mastodon-leader
 
 airdodge:
   mastodon-connector-svc:

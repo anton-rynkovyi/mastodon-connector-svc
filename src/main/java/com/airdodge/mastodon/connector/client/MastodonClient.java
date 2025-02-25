@@ -2,8 +2,9 @@ package com.airdodge.mastodon.connector.client;
 
 import com.airdodge.mastodon.connector.model.MastodonData;
 import com.airdodge.mastodon.connector.model.MastodonSseType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ServerSentEvent;
@@ -27,18 +28,23 @@ public class MastodonClient {
 
     private final MastodonProperties mastodonProperties;
 
+    private final ObjectMapper objectMapper;
+
     private final WebClient webClient;
 
-    public MastodonClient(MastodonProperties mastodonProperties) {
+    public MastodonClient(MastodonProperties mastodonProperties, ObjectMapper objectMapper) {
         this.mastodonProperties = mastodonProperties;
+        this.objectMapper = objectMapper;
+        HttpClient httpClient = HttpClient.create(ConnectionProvider.builder(CONNECTION_POOL_NAME)
+                        .maxConnections(50)
+                        .maxIdleTime(Duration.ofSeconds(45))
+                        .build())
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .responseTimeout(Duration.ofSeconds(30))
+                .followRedirect(true);
         this.webClient = WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(
-                        HttpClient.create(ConnectionProvider.builder(CONNECTION_POOL_NAME)
-                                        .maxConnections(300)
-                                        .maxIdleTime(Duration.ofSeconds(100))
-                                        .build())
-                                .followRedirect(true))
-                ).build();
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
     }
 
     public Flux<ServerSentEvent<MastodonData>> getPostsSteam() {
@@ -52,23 +58,26 @@ public class MastodonClient {
                 )
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .retrieve()
-                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<MastodonData>>() {
-                })
-                .mapNotNull(sse -> {
-                            MastodonSseType mastodonSseType = MastodonSseType.fromValue(sse.event());
-                            ServerSentEvent.Builder<MastodonData> sseBuilder = ServerSentEvent.<MastodonData>builder()
-                                    .event(sse.event() != null ? sse.event() : MastodonSseType.UNKNOWN.name());
-                            return mastodonSseType == MastodonSseType.DELETE
-                                    ? sseBuilder
-                                    .data(new MastodonData(String.valueOf(sse.data()), null, null))
-                                    .build()
-                                    : sseBuilder
-                                    .data(sse.data())
-                                    .build();
-                        }
-                )
-                .doOnError(it -> log.warn("Error streaming data"))
-                .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))
+//              Mastodon doesn't send body when 'delete'!? Just sends id as a number!
+//                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<MastodonData>>() {})
+                .bodyToFlux(ServerSentEvent.class)
+                .mapNotNull(this::parseAndGetSseMastodonData)
+                .doOnError(it -> log.error("Error streaming data"))
+                .retryWhen(Retry.fixedDelay(Long.MAX_VALUE, Duration.ofSeconds(1))
+                        .filter(throwable -> throwable instanceof java.net.SocketException))
                 .log();
+    }
+
+    private ServerSentEvent<MastodonData> parseAndGetSseMastodonData(ServerSentEvent<?> sse) {
+        MastodonSseType mastodonSseType = MastodonSseType.fromValue(sse.event());
+        ServerSentEvent.Builder<MastodonData> sseBuilder = ServerSentEvent.<MastodonData>builder()
+                .event(sse.event() != null ? sse.event() : MastodonSseType.UNKNOWN.name());
+        return mastodonSseType == MastodonSseType.DELETE
+                ? sseBuilder
+                .data(new MastodonData(String.valueOf(sse.data()), null, null))
+                .build()
+                : sseBuilder
+                .data(objectMapper.convertValue(sse.data(), MastodonData.class))
+                .build();
     }
 }

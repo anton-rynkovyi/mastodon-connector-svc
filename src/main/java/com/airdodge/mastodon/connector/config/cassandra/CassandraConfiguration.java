@@ -1,4 +1,4 @@
-package com.airdodge.mastodon.connector.config;
+package com.airdodge.mastodon.connector.config.cassandra;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import org.springframework.boot.CommandLineRunner;

@@ -1,6 +1,5 @@
-package com.airdodge.mastodon.connector.config;
+package com.airdodge.mastodon.connector.config.kafka;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;

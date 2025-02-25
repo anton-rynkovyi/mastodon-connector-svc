@@ -1,4 +1,4 @@
-package com.airdodge.mastodon.connector.config;
+package com.airdodge.mastodon.connector.config.kafka;
 
 import com.airdodge.mastodon.connector.model.MastodonData;
 import org.apache.kafka.clients.admin.AdminClientConfig;

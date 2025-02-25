@@ -1,7 +1,7 @@
 package com.airdodge.mastodon.connector.service;
 
 import com.airdodge.mastodon.connector.client.MastodonClient;
-import com.airdodge.mastodon.connector.config.KafkaTopicConfiguration;
+import com.airdodge.mastodon.connector.config.kafka.KafkaTopicConfiguration;
 import com.airdodge.mastodon.connector.model.MastodonData;
 import com.airdodge.mastodon.connector.model.Post;
 import com.airdodge.mastodon.connector.repository.PostReactiveRepository;
