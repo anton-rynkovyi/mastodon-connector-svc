@@ -73,8 +73,11 @@ public class PostServiceImpl implements PostService {
     }
 
     private Mono<ServerSentEvent<MastodonPost>> sendKafkaEvent(ServerSentEvent<MastodonPost> sse) {
-        ProducerRecord<String, MastodonPost> producerRecord =
-                new ProducerRecord<>(kafkaTopicConfiguration.getPosts().getName(), sse.data());
+        ProducerRecord<String, MastodonPost> producerRecord = new ProducerRecord<>(
+                kafkaTopicConfiguration.getPosts().getName(),
+                sse.data().account() != null ? sse.data().account().id() : "-1",
+                sse.data()
+        );
         SenderRecord<String, MastodonPost, String> senderRecord =
                 SenderRecord.create(producerRecord, sse.data().id());
         return kafkaSender.send(Mono.just(senderRecord))
