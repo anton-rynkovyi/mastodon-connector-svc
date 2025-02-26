@@ -3,7 +3,7 @@ server:
 
 spring:
   cassandra:
-    contact-points: localhost
+    contact-points: cassandra
     port: 9042
     local-datacenter: datacenter1
     keyspace-name: mastodon
@@ -11,7 +11,7 @@ spring:
     password: admin
     schema-action: create_if_not_exists
   kafka:
-    bootstrap-servers: localhost:29092
+    bootstrap-servers: kafka:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

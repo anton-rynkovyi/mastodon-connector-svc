@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Profile;
 
 @Slf4j
 @Configuration
-@Profile("local")
+@Profile({"local", "compose"})
 @AllArgsConstructor
 public class LocalPostsStreamingConfiguration {
 

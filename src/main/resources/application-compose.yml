@@ -1,9 +1,9 @@
 spring:
   cassandra:
-    contact-points: localhost
+    contact-points: cassandra
     port: 9042
   kafka:
-    bootstrap-servers: localhost:29092
+    bootstrap-servers: kafka:9092
   cloud:
     kubernetes:
       leader:
